@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPTV Player Pro 📺</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { width: 90%; max-width: 900px; text-align: center; }
+        video { width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 20px; }
+        .input-group { background: #333; padding: 20px; border-radius: 10px; display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border-radius: 5px; border: none; font-size: 16px; }
+        button { padding: 12px 25px; background: #e50914; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #ff0a16; }
+        #status { font-size: 14px; margin-top: 10px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Mi Reproductor IPTV 🚀</h1>
+        
+        <video id="video" controls></video>
+
+        <div class="input-group">
+            <input type="text" id="stream-url" placeholder="Pega aquí tu link .m3u8 (HTTP o HTTPS)">
+            <button onclick="startStreaming()">Reproducir</button>
+        </div>
+
+        <p id="status">Esperando señal...</p>
+    </div>
+
+    <script>
+        function startStreaming() {
+            const video = document.getElementById('video');
+            const status = document.getElementById('status');
+            const rawUrl = document.getElementById('stream-url').value;
+
+            if (!rawUrl) {
+                status.innerText = "❌ Por favor, ingresa una URL válida.";
+                return;
+            }
+
+            // IMPORTANTE: Aquí mandamos la URL a través de tu proxy de Railway
+            // Esto convierte el HTTP a HTTPS y quita el error de CORS automáticamente
+            const proxiedUrl = `/stream?url=${encodeURIComponent(rawUrl)}`;
+
+            status.innerText = "Conectando con el servidor de Railway... ⏳";
+
+            if (Hls.isSupported()) {
+                const hls = new Hls();
+                hls.loadSource(proxiedUrl);
+                hls.attachMedia(video);
+                
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    status.innerText = "✅ ¡Señal recibida! Reproduciendo...";
+                    video.play();
+                });
+
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        status.innerText = "❌ Error de conexión. Revisa si el link de IPTV está activo.";
+                        console.error("Error HLS:", data);
+                    }
+                });
+            } 
+            else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Soporte nativo para Safari/iOS
+                video.src = proxiedUrl;
+                video.addEventListener('loadedmetadata', () => {
+                    status.innerText = "✅ Reproduciendo (Nativo)...";
+                    video.play();
+                });
+            }
+        }
+    </script>
+</body>
+</html>
